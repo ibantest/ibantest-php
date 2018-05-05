@@ -4,6 +4,7 @@ namespace Ibantest;
 
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
+use GuzzleHttp\Exception\ClientException;
 use GuzzleHttp\Psr7\Request;
 
 /**
@@ -185,8 +186,13 @@ class Ibantest
      */
     protected function handleException(\Exception $e)
     {
+        if ($e instanceof ClientException) {
+            return $e->getResponse()->getBody()->getContents();
+        }
+
         return [
-            'error' => $e->getMessage()
+            'message' => $e->getMessage(),
+            'errorCode' => 9999,
         ];
     }
 }
