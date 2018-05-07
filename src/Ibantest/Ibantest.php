@@ -71,7 +71,7 @@ class Ibantest
      *
      * @return array|mixed
      */
-    public function remainingCredits()
+    public function getRemainingCredits()
     {
         try {
             $request = new Request(

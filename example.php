@@ -8,7 +8,7 @@ $api = new Ibantest();
 $api->setToken('###your_api_token###');
 
 # get count of remaining credits
-$res = $api->remainingCredits();
+$res = $api->getRemainingCredits();
 print_r($res);
 
 # validate IBAN
