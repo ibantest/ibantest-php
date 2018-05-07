@@ -81,7 +81,7 @@ class Ibantest
             );
             $response = $this->client->send($request);
 
-            return json_decode($response->getBody(), true);
+            return $this->jsonResponse($response->getBody());
         } catch (GuzzleException $e) {
             return $this->handleException($e);
         }
@@ -103,7 +103,7 @@ class Ibantest
             );
             $response = $this->client->send($request);
 
-            return json_decode($response->getBody(), true);
+            return $this->jsonResponse($response->getBody());
         } catch (GuzzleException $e) {
             return $this->handleException($e);
         }
@@ -127,7 +127,7 @@ class Ibantest
             );
             $response = $this->client->send($request);
 
-            return json_decode($response->getBody(), true);
+            return $this->jsonResponse($response->getBody());
         } catch (GuzzleException $e) {
             return $this->handleException($e);
         }
@@ -149,7 +149,7 @@ class Ibantest
             );
             $response = $this->client->send($request);
 
-            return json_decode($response->getBody(), true);
+            return $this->jsonResponse($response->getBody());
         } catch (GuzzleException $e) {
             return $this->handleException($e);
         }
@@ -172,10 +172,19 @@ class Ibantest
             );
             $response = $this->client->send($request);
 
-            return json_decode($response->getBody(), true);
+            return $this->jsonResponse($response->getBody());
         } catch (GuzzleException $e) {
             return $this->handleException($e);
         }
+    }
+
+    /**
+     * @param array $data
+     * @return mixed
+     */
+    protected function jsonResponse($data)
+    {
+        return json_decode($data, true);
     }
 
     /**
@@ -187,7 +196,7 @@ class Ibantest
     protected function handleException(\Exception $e)
     {
         if ($e instanceof ClientException) {
-            return $e->getResponse()->getBody()->getContents();
+            return json_decode($e->getResponse()->getBody()->getContents(), true);
         }
 
         return [
