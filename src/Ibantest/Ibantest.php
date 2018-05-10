@@ -196,7 +196,9 @@ class Ibantest
     protected function handleException(\Exception $e)
     {
         if ($e instanceof ClientException) {
-            return json_decode($e->getResponse()->getBody()->getContents(), true);
+            if (!empty($message)) {
+                return json_decode($message, true);
+            }
         }
 
         return [
