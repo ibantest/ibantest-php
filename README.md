@@ -41,6 +41,14 @@ print_r($res);
 $res = $api->calculateIban('AT', '12000', '703447144');
 print_r($res);
 
+# calculate IBAN out of country code, bank code and account number
+$res = $api->calculateIban('BE', '510', '0075470', '61');
+print_r($res);
+
+# calculate IBAN out of country code, bank code and account number
+$res = $api->calculateIban('DE', '10090000', '0657845795');
+print_r($res);
+
 # validate BIC
 $res = $api->validateBic('BFSWDE33BER');
 print_r($res);
