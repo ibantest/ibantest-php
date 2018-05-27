@@ -112,17 +112,22 @@ class Ibantest
     /**
      * calculate IBAN
      *
-     * @param string $country ISO code of country (e.g. DE, AT, CH)
+     * @param string $country ISO code of country (e.g. AT, BE, DE)
      * @param string $bankcode bank code
      * @param string $account account number
+     * @param string $checkDigit check digit
      * @return array|mixed
      */
-    public function calculateIban($country, $bankcode, $account)
+    public function calculateIban($country, $bankcode, $account, $checkDigit = '')
     {
         try {
+            $url = 'calculate_iban/'.$country.'/'.$bankcode.'/'.$account;
+            if(!empty($checkDigit)) {
+                $url .= '/' . $checkDigit;
+            }
             $request = new Request(
                 self::METHOD_GET,
-                'calculate_iban/'.$country.'/'.$bankcode.'/'.$account,
+                $url,
                 $this->getAuthHeader()
             );
             $response = $this->client->send($request);
