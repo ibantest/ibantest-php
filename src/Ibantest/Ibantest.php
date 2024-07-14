@@ -23,11 +23,26 @@ class Ibantest
     /** @var string GET Method */
     const METHOD_GET = 'GET';
 
+    /** @var string endpoint for credits */
+    const ENDPOINT_CREDITS = 'account/credits';
+
+    /** @var string endpoint for IBAN validation */
+    const ENDPOINT_VALIDATE_IBAN = 'validate_iban';
+
+    /** @var string endpoint for IBAN calculation */
+    const ENDPOINT_CALCULATE_IBAN = 'calculate_iban';
+
+    /** @var string endpoint for BIC validation */
+    const ENDPOINT_VALIDATE_BIC = 'validate_bic';
+
+    /** @var string endpoint for finding bank */
+    const ENDPOINT_FIND_BANK = 'find_bank';
+
     /** @var Client */
     protected $client;
 
     /** @var string API Token */
-    protected $apiToken;
+    protected string $apiToken = '';
 
     /**
      * Ibantest constructor.
@@ -39,7 +54,7 @@ class Ibantest
     {
         $this->client = new Client(
             [
-                'base_uri' => $apiUrl.'/'.$apiVersion.'/',
+                'base_uri' => $apiUrl . '/' . $apiVersion . '/',
             ]
         );
     }
@@ -49,7 +64,7 @@ class Ibantest
      *
      * @param string $token Your API Token
      */
-    public function setToken($token)
+    public function setToken($token): void
     {
         $this->apiToken = $token;
     }
@@ -59,11 +74,36 @@ class Ibantest
      *
      * @return array
      */
-    protected function getAuthHeader()
+    protected function getAuthHeader(): array
     {
         return [
-            'Authorization' => 'Bearer '.$this->apiToken,
+            'Authorization' => 'Bearer ' . $this->apiToken,
         ];
+    }
+
+    /**
+     * Sends a request to the server.
+     *
+     * @param string $url The URL to send the request to.
+     * @param array $data The data to send with the request.
+     * @param string $method The HTTP method to use for the request (e.g., GET, POST).
+     * @return mixed The response from the server.
+     */
+    protected function sendRequest(string $url): array
+    {
+        try {
+            $request = new Request(
+                self::METHOD_GET,
+                $url,
+                $this->getAuthHeader()
+            );
+
+            $response = $this->client->send($request);
+
+            return $this->jsonResponse($response->getBody());
+        } catch (GuzzleException $e) {
+            return $this->handleException($e);
+        }
     }
 
     /**
@@ -71,20 +111,9 @@ class Ibantest
      *
      * @return array|mixed
      */
-    public function getRemainingCredits()
+    public function getRemainingCredits(): array
     {
-        try {
-            $request = new Request(
-                self::METHOD_GET,
-                'account/credits',
-                $this->getAuthHeader()
-            );
-            $response = $this->client->send($request);
-
-            return $this->jsonResponse($response->getBody());
-        } catch (GuzzleException $e) {
-            return $this->handleException($e);
-        }
+        return $this->sendRequest(self::ENDPOINT_CREDITS);
     }
 
     /**
@@ -93,20 +122,9 @@ class Ibantest
      * @param string $iban IBAN
      * @return array|mixed
      */
-    public function validateIban($iban)
+    public function validateIban($iban): array
     {
-        try {
-            $request = new Request(
-                self::METHOD_GET,
-                'validate_iban/'.$iban,
-                $this->getAuthHeader()
-            );
-            $response = $this->client->send($request);
-
-            return $this->jsonResponse($response->getBody());
-        } catch (GuzzleException $e) {
-            return $this->handleException($e);
-        }
+        return $this->sendRequest(self::ENDPOINT_VALIDATE_IBAN .'/' . $iban);
     }
 
     /**
@@ -118,24 +136,14 @@ class Ibantest
      * @param string $checkDigit check digit
      * @return array|mixed
      */
-    public function calculateIban($country, $bankcode, $account, $checkDigit = '')
+    public function calculateIban($country, $bankcode, $account, $checkDigit = ''): array
     {
-        try {
-            $url = 'calculate_iban/'.$country.'/'.$bankcode.'/'.$account;
-            if(!empty($checkDigit)) {
-                $url .= '/' . $checkDigit;
-            }
-            $request = new Request(
-                self::METHOD_GET,
-                $url,
-                $this->getAuthHeader()
-            );
-            $response = $this->client->send($request);
-
-            return $this->jsonResponse($response->getBody());
-        } catch (GuzzleException $e) {
-            return $this->handleException($e);
+        $data = [self::ENDPOINT_CALCULATE_IBAN, $country, $bankcode, $account];
+        if(!empty($checkDigit)) {
+            $data[] = $checkDigit;
         }
+
+        return $this->sendRequest(implode('/', $data));
     }
 
     /**
@@ -144,20 +152,9 @@ class Ibantest
      * @param string $bic BIC / SWIFT Code
      * @return array|mixed
      */
-    public function validateBic($bic)
+    public function validateBic($bic): array
     {
-        try {
-            $request = new Request(
-                self::METHOD_GET,
-                'validate_bic/'.$bic,
-                $this->getAuthHeader()
-            );
-            $response = $this->client->send($request);
-
-            return $this->jsonResponse($response->getBody());
-        } catch (GuzzleException $e) {
-            return $this->handleException($e);
-        }
+        return $this->sendRequest(implode('/', [self::ENDPOINT_VALIDATE_BIC, $bic]));
     }
 
     /**
@@ -167,27 +164,18 @@ class Ibantest
      * @param string $bankcode bank code
      * @return array|mixed
      */
-    public function findBank($country, $bankcode)
+    public function findBank($country, $bankcode): array
     {
-        try {
-            $request = new Request(
-                self::METHOD_GET,
-                'find_bank/'.$country.'/'.$bankcode,
-                $this->getAuthHeader()
-            );
-            $response = $this->client->send($request);
-
-            return $this->jsonResponse($response->getBody());
-        } catch (GuzzleException $e) {
-            return $this->handleException($e);
-        }
+        return $this->sendRequest(implode('/', [self::ENDPOINT_FIND_BANK, $country, $bankcode]));
     }
 
     /**
-     * @param array $data
-     * @return mixed
+     * convert JSON response to array
+     * 
+     * @param string $data
+     * @return array
      */
-    protected function jsonResponse($data)
+    protected function jsonResponse(string $data): array
     {
         return json_decode($data, true);
     }
@@ -198,12 +186,10 @@ class Ibantest
      * @param \Exception $e
      * @return array
      */
-    protected function handleException(\Exception $e)
+    protected function handleException(\Exception $e): array
     {
-        if ($e instanceof ClientException) {
-            if (!empty($message)) {
-                return json_decode($message, true);
-            }
+        if ($e instanceof ClientException && !empty($message)) {
+            return json_decode($message, true);
         }
 
         return [
