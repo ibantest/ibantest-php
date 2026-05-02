@@ -1,78 +1,179 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Ibantest;
 
 use GuzzleHttp\Client;
-use GuzzleHttp\Exception\GuzzleException;
+use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\ClientException;
-use GuzzleHttp\Psr7\Request;
+use GuzzleHttp\Exception\GuzzleException;
+use GuzzleHttp\Exception\RequestException;
+use Throwable;
 
-/**
- * Class Ibantest
- *
- * @package IBANTEST
- */
 class Ibantest
 {
-    /** @var string API base URL */
-    const API_URL = "https://api.ibantest.com";
+    public const API_URL = 'https://api.ibantest.com';
+    public const API_VERSION = 'v1';
+    public const METHOD_GET = 'GET';
 
-    /** @var string API Version */
-    const API_VERSION = 'v1';
+    public const ENDPOINT_ACCOUNT = 'account';
+    public const ENDPOINT_CREDITS = 'credits';
+    public const ENDPOINT_VALIDATE_IBAN = 'validate-iban';
+    public const ENDPOINT_CALCULATE_IBAN = 'calculate-iban';
+    public const ENDPOINT_VALIDATE_BIC = 'validate-bic';
+    public const ENDPOINT_FIND_BANK = 'find-bank';
 
-    /** @var string GET Method */
-    const METHOD_GET = 'GET';
-
-    /** @var string endpoint for credits */
-    const ENDPOINT_CREDITS = 'account/credits';
-
-    /** @var string endpoint for IBAN validation */
-    const ENDPOINT_VALIDATE_IBAN = 'validate_iban';
-
-    /** @var string endpoint for IBAN calculation */
-    const ENDPOINT_CALCULATE_IBAN = 'calculate_iban';
-
-    /** @var string endpoint for BIC validation */
-    const ENDPOINT_VALIDATE_BIC = 'validate_bic';
-
-    /** @var string endpoint for finding bank */
-    const ENDPOINT_FIND_BANK = 'find_bank';
-
-    /** @var Client */
-    protected $client;
-
-    /** @var string API Token */
+    protected ClientInterface $client;
     protected string $apiToken = '';
 
-    /**
-     * Ibantest constructor.
-     *
-     * @param string $apiVersion
-     * @param string $apiVersion
-     */
-    public function __construct($apiUrl = self::API_URL, $apiVersion = self::API_VERSION)
-    {
-        $this->client = new Client(
-            [
-                'base_uri' => $apiUrl . '/' . $apiVersion . '/',
-            ]
-        );
+    public function __construct(
+        string $apiUrl = self::API_URL,
+        string $apiVersion = self::API_VERSION,
+        ?ClientInterface $client = null
+    ) {
+        $this->client = $client ?? new Client([
+            'base_uri' => rtrim($apiUrl, '/') . '/' . trim($apiVersion, '/') . '/',
+        ]);
     }
 
-    /**
-     * set API Token
-     *
-     * @param string $token Your API Token
-     */
-    public function setToken($token): void
+    public function setToken(string $token): void
     {
         $this->apiToken = $token;
     }
 
     /**
-     * returns default authorization header
-     *
-     * @return array
+     * @return array<int|string, mixed>
+     */
+    public function getRemainingCredits(): array
+    {
+        return $this->sendRequest($this->buildPath([self::ENDPOINT_ACCOUNT, self::ENDPOINT_CREDITS]));
+    }
+
+    /**
+     * @return array<int|string, mixed>
+     */
+    public function validateIban(string $iban): array
+    {
+        return $this->sendRequest($this->buildPath([self::ENDPOINT_VALIDATE_IBAN, $iban]));
+    }
+
+    /**
+     * @return array<int|string, mixed>
+     */
+    public function calculateDeIban(string $bankcode, string $account): array
+    {
+        return $this->calculateForCountry('DE', [$bankcode, $account]);
+    }
+
+    /**
+     * @return array<int|string, mixed>
+     */
+    public function calculateAtIban(string $bankcode, string $account): array
+    {
+        return $this->calculateForCountry('AT', [$bankcode, $account]);
+    }
+
+    /**
+     * @return array<int|string, mixed>
+     */
+    public function calculateBeIban(string $bankcode, string $account, string $checkDigit): array
+    {
+        return $this->calculateForCountry('BE', [$bankcode, $account, $checkDigit]);
+    }
+
+    /**
+     * @return array<int|string, mixed>
+     */
+    public function calculateCzIban(string $bankcode, string $account, ?string $prefix = null): array
+    {
+        $segments = [$bankcode, $account];
+        if ($prefix !== null && $prefix !== '') {
+            $segments[] = $prefix;
+        }
+
+        return $this->calculateForCountry('CZ', $segments);
+    }
+
+    /**
+     * @return array<int|string, mixed>
+     */
+    public function calculateEsIban(string $bankcode, string $branch, string $account): array
+    {
+        return $this->calculateForCountry('ES', [$bankcode, $branch, $account]);
+    }
+
+    /**
+     * @return array<int|string, mixed>
+     */
+    public function calculateItIban(string $cin, string $abi, string $cab, string $account): array
+    {
+        return $this->calculateForCountry('IT', [$cin, $abi, $cab, $account]);
+    }
+
+    /**
+     * @return array<int|string, mixed>
+     */
+    public function calculateLiIban(string $bankcode, string $account): array
+    {
+        return $this->calculateForCountry('LI', [$bankcode, $account]);
+    }
+
+    /**
+     * @return array<int|string, mixed>
+     */
+    public function calculateLuIban(string $bankcode, string $account): array
+    {
+        return $this->calculateForCountry('LU', [$bankcode, $account]);
+    }
+
+    /**
+     * @return array<int|string, mixed>
+     */
+    public function calculateMcIban(string $bankcode, string $branch, string $account): array
+    {
+        return $this->calculateForCountry('MC', [$bankcode, $branch, $account]);
+    }
+
+    /**
+     * @return array<int|string, mixed>
+     */
+    public function calculateNlIban(string $bankcode, string $account): array
+    {
+        return $this->calculateForCountry('NL', [$bankcode, $account]);
+    }
+
+    /**
+     * @return array<int|string, mixed>
+     */
+    public function calculateIban(string $country, string $bankcode, string $account, string $checkDigit = ''): array
+    {
+        $segments = [$bankcode, $account];
+        if ($checkDigit !== '') {
+            $segments[] = $checkDigit;
+        }
+
+        return $this->calculateForCountry($country, $segments);
+    }
+
+    /**
+     * @return array<int|string, mixed>
+     */
+    public function validateBic(string $bic): array
+    {
+        return $this->sendRequest($this->buildPath([self::ENDPOINT_VALIDATE_BIC, $bic]));
+    }
+
+    /**
+     * @return array<int|string, mixed>
+     */
+    public function findBank(string $country, string $bankcode): array
+    {
+        return $this->sendRequest($this->buildPath([self::ENDPOINT_FIND_BANK, $country, $bankcode]));
+    }
+
+    /**
+     * @return array<string, string>
      */
     protected function getAuthHeader(): array
     {
@@ -82,119 +183,82 @@ class Ibantest
     }
 
     /**
-     * Sends a request to the server.
-     *
-     * @param string $url The URL to send the request to.
-     * @param array $data The data to send with the request.
-     * @param string $method The HTTP method to use for the request (e.g., GET, POST).
-     * @return mixed The response from the server.
+     * @return array<int|string, mixed>
      */
-    protected function sendRequest(string $url): array
+    protected function sendRequest(string $path): array
     {
         try {
-            $request = new Request(
-                self::METHOD_GET,
-                $url,
-                $this->getAuthHeader()
-            );
+            $response = $this->client->request(self::METHOD_GET, $path, [
+                'headers' => $this->getAuthHeader(),
+            ]);
 
-            $response = $this->client->send($request);
-
-            return $this->jsonResponse($response->getBody());
+            return $this->jsonResponse((string) $response->getBody());
         } catch (GuzzleException $e) {
             return $this->handleException($e);
         }
     }
 
     /**
-     * get count of remaining credits
-     *
-     * @return array|mixed
+     * @param array<int, string> $segments
+     * @return array<int|string, mixed>
      */
-    public function getRemainingCredits(): array
+    protected function calculateForCountry(string $country, array $segments): array
     {
-        return $this->sendRequest(self::ENDPOINT_CREDITS);
+        return $this->sendRequest(
+            $this->buildPath(array_merge([self::ENDPOINT_CALCULATE_IBAN, strtoupper($country)], $segments))
+        );
     }
 
     /**
-     * validate IBAN
-     *
-     * @param string $iban IBAN
-     * @return array|mixed
+     * @param array<int, string> $segments
      */
-    public function validateIban($iban): array
+    protected function buildPath(array $segments): string
     {
-        return $this->sendRequest(self::ENDPOINT_VALIDATE_IBAN .'/' . $iban);
+        return implode('/', array_map(
+            static fn (string $segment): string => rawurlencode($segment),
+            $segments
+        ));
     }
 
     /**
-     * calculate IBAN
-     *
-     * @param string $country ISO code of country (e.g. AT, BE, DE)
-     * @param string $bankcode bank code
-     * @param string $account account number
-     * @param string $checkDigit check digit
-     * @return array|mixed
-     */
-    public function calculateIban($country, $bankcode, $account, $checkDigit = ''): array
-    {
-        $data = [self::ENDPOINT_CALCULATE_IBAN, $country, $bankcode, $account];
-        if(!empty($checkDigit)) {
-            $data[] = $checkDigit;
-        }
-
-        return $this->sendRequest(implode('/', $data));
-    }
-
-    /**
-     * validate bic / swift code
-     *
-     * @param string $bic BIC / SWIFT Code
-     * @return array|mixed
-     */
-    public function validateBic($bic): array
-    {
-        return $this->sendRequest(implode('/', [self::ENDPOINT_VALIDATE_BIC, $bic]));
-    }
-
-    /**
-     * find bank
-     *
-     * @param string $country ISO code of country (e.g. DE, AT, CH)
-     * @param string $bankcode bank code
-     * @return array|mixed
-     */
-    public function findBank($country, $bankcode): array
-    {
-        return $this->sendRequest(implode('/', [self::ENDPOINT_FIND_BANK, $country, $bankcode]));
-    }
-
-    /**
-     * convert JSON response to array
-     * 
-     * @param string $data
-     * @return array
+     * @return array<int|string, mixed>
      */
     protected function jsonResponse(string $data): array
     {
-        return json_decode($data, true);
+        $decoded = json_decode($data, true);
+        if (json_last_error() !== JSON_ERROR_NONE || !is_array($decoded)) {
+            return [
+                'message' => 'Invalid JSON response from API',
+                'errorCode' => 9998,
+            ];
+        }
+
+        return $decoded;
     }
 
     /**
-     * handle Exception
-     *
-     * @param \Exception $e
-     * @return array
+     * @return array<int|string, mixed>
      */
-    protected function handleException(\Exception $e): array
+    protected function handleException(Throwable $e): array
     {
-        if ($e instanceof ClientException && !empty($message)) {
-            return json_decode($message, true);
+        $responseBody = null;
+
+        if ($e instanceof ClientException && $e->hasResponse()) {
+            $responseBody = (string) $e->getResponse()->getBody();
+        } elseif ($e instanceof RequestException && $e->hasResponse()) {
+            $responseBody = (string) $e->getResponse()->getBody();
+        }
+
+        if ($responseBody !== null && $responseBody !== '') {
+            $decoded = json_decode($responseBody, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                return $decoded;
+            }
         }
 
         return [
             'message' => $e->getMessage(),
-            'errorCode' => 9999,
+            'errorCode' => ($e->getCode() > 0 ? (int) $e->getCode() : 9999),
         ];
     }
 }

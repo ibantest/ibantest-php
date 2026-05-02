@@ -1,0 +1,1 @@
+{"version":2,"defects":[],"times":{"Ibantest\\Tests\\IbantestTest::testValidateIbanBuildsEncodedPath":0.062,"Ibantest\\Tests\\IbantestTest::testCountrySpecificMethodBuildsExpectedPath":0.001,"Ibantest\\Tests\\IbantestTest::testClientExceptionReturnsDecodedApiErrorPayload":0.012}}

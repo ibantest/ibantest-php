@@ -1,14 +1,35 @@
 {
   "name": "ibantest/ibantest-php",
   "description": "PHP client of IBANTEST API",
+  "version": "1.4.0",
   "require": {
     "php": "^8.1",
     "guzzlehttp/guzzle": "^7.8"
+  },
+  "require-dev": {
+    "friendsofphp/php-cs-fixer": "^3.64",
+    "phpstan/phpstan": "^1.12",
+    "phpunit/phpunit": "^10.5"
   },
   "autoload": {
     "psr-4": {
       "Ibantest\\": "src/Ibantest"
     }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Ibantest\\Tests\\": "tests/"
+    }
+  },
+  "scripts": {
+    "test": "phpunit",
+    "analyse": "phpstan analyse --memory-limit=512M",
+    "lint": "php-cs-fixer fix --dry-run --diff",
+    "ci": [
+      "@test",
+      "@analyse",
+      "@lint"
+    ]
   },
   "homepage": "https://www.ibantest.com/",
   "keywords": [
